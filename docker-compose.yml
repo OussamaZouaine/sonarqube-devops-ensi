@@ -1,0 +1,43 @@
+# PostgreSQL is required; SonarQube does not support embedded DB for normal use.
+# Run: docker compose up -d
+# UI: http://localhost:9000 (default login admin / admin — change on first login)
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: sonarqube-postgres
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+      POSTGRES_DB: sonar
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sonarqube:
+    build: .
+    image: local-sonarqube:lts-community
+    container_name: sonarqube
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    ports:
+      - "9000:9000"
+
+volumes:
+  postgresql_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
